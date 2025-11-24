@@ -18,6 +18,11 @@ export const UNIVERSITIES = [
   "СибГУПС",
   "УрГУПС",
   "МГАВТ",
+  "ДВГУПС",
+  "СамГУПС",
+  "ВГУВТ",
+  "МАДИ",
+  "ИрГУПС",
 ] as const;
 
 export const TOPICS = [
