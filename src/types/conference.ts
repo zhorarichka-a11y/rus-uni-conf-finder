@@ -7,7 +7,13 @@ export interface Conference {
   location: string;
   topic: string;
   description: string;
+  format: "Очно" | "Онлайн" | "Гибридный";
   registrationUrl?: string;
+  registrationDeadline?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  venue?: string;
+  fee?: string;
 }
 
 export const UNIVERSITIES = [
