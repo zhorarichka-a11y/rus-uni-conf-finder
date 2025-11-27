@@ -14,7 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      conferences: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          date: string
+          description: string
+          end_date: string | null
+          fee: string | null
+          format: string
+          id: string
+          location: string
+          registration_deadline: string | null
+          registration_url: string | null
+          source_url: string | null
+          title: string
+          topic: string
+          university: string
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          date: string
+          description: string
+          end_date?: string | null
+          fee?: string | null
+          format: string
+          id?: string
+          location: string
+          registration_deadline?: string | null
+          registration_url?: string | null
+          source_url?: string | null
+          title: string
+          topic: string
+          university: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          date?: string
+          description?: string
+          end_date?: string | null
+          fee?: string | null
+          format?: string
+          id?: string
+          location?: string
+          registration_deadline?: string | null
+          registration_url?: string | null
+          source_url?: string | null
+          title?: string
+          topic?: string
+          university?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
+      scraping_sources: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_scraped_at: string | null
+          name: string
+          source_type: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scraped_at?: string | null
+          name: string
+          source_type: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scraped_at?: string | null
+          name?: string
+          source_type?: string
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
