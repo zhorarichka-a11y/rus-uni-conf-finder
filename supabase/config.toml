@@ -1,1 +1,4 @@
 project_id = "grcghwnncnukfpjvvftm"
+
+[functions.scrape-conferences]
+verify_jwt = false
