@@ -1,13 +1,16 @@
 import { useState, useMemo } from "react";
 import { ConferenceCard } from "@/components/ConferenceCard";
 import { FilterControls } from "@/components/FilterControls";
-import { conferences } from "@/data/conferences";
+import { useConferences } from "@/hooks/useConferences";
 import heroImage from "@/assets/hero-transport.jpg";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
   const [selectedUniversity, setSelectedUniversity] = useState("Все университеты");
   const [selectedTopic, setSelectedTopic] = useState("Все темы");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: conferences = [], isLoading, error } = useConferences();
 
   const filteredConferences = useMemo(() => {
     return conferences.filter((conference) => {
@@ -19,7 +22,7 @@ const Index = () => {
 
       return matchesUniversity && matchesTopic && matchesSearch;
     });
-  }, [selectedUniversity, selectedTopic, searchQuery]);
+  }, [conferences, selectedUniversity, selectedTopic, searchQuery]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,7 +71,26 @@ const Index = () => {
               </p>
             </div>
 
-            {filteredConferences.length > 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <Skeleton className="h-40 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="text-center py-16">
+                <p className="text-lg text-destructive">
+                  Ошибка загрузки конференций
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Попробуйте обновить страницу
+                </p>
+              </div>
+            ) : filteredConferences.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredConferences.map((conference) => (
                   <ConferenceCard key={conference.id} conference={conference} />
