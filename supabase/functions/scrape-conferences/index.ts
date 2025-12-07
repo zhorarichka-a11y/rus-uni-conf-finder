@@ -25,7 +25,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Получаем активные источники для парсинга
+    // Получаем активные источники
     const { data: sources, error: sourcesError } = await supabase
       .from('scraping_sources')
       .select('*')
@@ -41,14 +41,32 @@ serve(async (req) => {
     const scrapedConferences = [];
 
     for (const source of sources || []) {
-      console.log(`Scraping ${source.name}...`);
+      console.log(`Processing ${source.name}...`);
       
       try {
-        // Получаем HTML страницы
-        const response = await fetch(source.url);
-        const html = await response.text();
+        // Fetch page with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const response = await fetch(source.url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.log(`Failed to fetch ${source.url}: ${response.status}`);
+          continue;
+        }
 
-        // Используем Lovable AI для извлечения информации о конференциях
+        const html = await response.text();
+        console.log(`Fetched ${html.length} bytes from ${source.name}`);
+
+        // Limit HTML size to avoid token limits
+        const truncatedHtml = html.substring(0, 30000);
+
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -60,36 +78,35 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: 'Ты помощник для извлечения информации о конференциях из HTML. Извлекай только предстоящие конференции, связанные с транспортом.'
+                content: `Ты помощник для извлечения информации о научных конференциях из HTML страниц российских транспортных университетов. Текущая дата: ${new Date().toISOString().split('T')[0]}. Извлекай ТОЛЬКО предстоящие конференции с датами в будущем.`
               },
               {
                 role: 'user',
-                content: `Извлеки информацию о конференциях из следующего HTML. Для каждой конференции верни объект со следующими полями:
-- title (название конференции)
-- date (дата начала в формате YYYY-MM-DD)
-- end_date (дата окончания в формате YYYY-MM-DD, если есть)
-- location (место проведения)
-- description (описание)
-- format (формат: "Очно", "Онлайн" или "Гибридный")
-- topic (тема из списка: "Железнодорожный транспорт", "Автомобильный транспорт", "Водный транспорт", "Авиационный транспорт", "Логистика", "Цифровые технологии", "Экология")
-- registration_url (ссылка на регистрацию, если есть)
-- registration_deadline (дедлайн регистрации в формате YYYY-MM-DD, если есть)
-- contact_email (email для контактов, если есть)
-- contact_phone (телефон для контактов, если есть)
-- venue (место проведения/адрес, если есть)
-- fee (стоимость участия, если есть)
+                content: `Проанализируй HTML и извлеки информацию о предстоящих научных конференциях.
 
-Верни только предстоящие конференции (дата >= сегодня). Формат ответа: JSON массив объектов.
+Для каждой конференции верни:
+- title: название конференции
+- date: дата начала (YYYY-MM-DD)
+- end_date: дата окончания (YYYY-MM-DD, если указана)
+- location: город или место проведения
+- description: краткое описание (1-2 предложения)
+- format: "Очно", "Онлайн" или "Гибридный"
+- topic: тема (выбери из: "Железнодорожный транспорт", "Автомобильный транспорт", "Логистика", "Цифровые технологии", "Экология", "Транспортные системы")
+- registration_url: ссылка на регистрацию
+- venue: адрес или здание проведения
+- fee: стоимость участия
+
+Если информации нет — пропусти это поле. Верни только конференции с датой >= ${new Date().toISOString().split('T')[0]}.
 
 HTML:
-${html.substring(0, 50000)}`
+${truncatedHtml}`
               }
             ],
             tools: [{
               type: "function",
               function: {
                 name: "extract_conferences",
-                description: "Extract conference information from HTML",
+                description: "Extract conference information",
                 parameters: {
                   type: "object",
                   properties: {
@@ -103,12 +120,9 @@ ${html.substring(0, 50000)}`
                           end_date: { type: "string" },
                           location: { type: "string" },
                           description: { type: "string" },
-                          format: { type: "string", enum: ["Очно", "Онлайн", "Гибридный"] },
+                          format: { type: "string" },
                           topic: { type: "string" },
                           registration_url: { type: "string" },
-                          registration_deadline: { type: "string" },
-                          contact_email: { type: "string" },
-                          contact_phone: { type: "string" },
                           venue: { type: "string" },
                           fee: { type: "string" }
                         },
@@ -138,8 +152,23 @@ ${html.substring(0, 50000)}`
           const conferences = extracted.conferences || [];
           
           for (const conf of conferences) {
+            // Validate date
+            if (!conf.date || !/^\d{4}-\d{2}-\d{2}$/.test(conf.date)) {
+              console.log(`Skipping conference with invalid date: ${conf.title}`);
+              continue;
+            }
+            
             scrapedConferences.push({
-              ...conf,
+              title: conf.title,
+              date: conf.date,
+              end_date: conf.end_date || null,
+              location: conf.location || source.name,
+              description: conf.description || '',
+              format: conf.format || 'Очно',
+              topic: conf.topic || 'Транспортные системы',
+              registration_url: conf.registration_url || null,
+              venue: conf.venue || null,
+              fee: conf.fee || null,
               university: source.name,
               source_url: source.url
             });
@@ -148,18 +177,18 @@ ${html.substring(0, 50000)}`
           console.log(`Extracted ${conferences.length} conferences from ${source.name}`);
         }
 
-        // Обновляем время последнего парсинга
+        // Update last scraped time
         await supabase
           .from('scraping_sources')
           .update({ last_scraped_at: new Date().toISOString() })
           .eq('id', source.id);
 
       } catch (error) {
-        console.error(`Error scraping ${source.name}:`, error);
+        console.error(`Error processing ${source.name}:`, error);
       }
     }
 
-    // Сохраняем найденные конференции
+    // Insert conferences if any found
     if (scrapedConferences.length > 0) {
       console.log(`Inserting ${scrapedConferences.length} conferences...`);
       
@@ -172,7 +201,6 @@ ${html.substring(0, 50000)}`
 
       if (insertError) {
         console.error('Error inserting conferences:', insertError);
-        throw insertError;
       }
     }
 
@@ -182,7 +210,8 @@ ${html.substring(0, 50000)}`
       JSON.stringify({ 
         success: true, 
         scraped: scrapedConferences.length,
-        message: `Успешно обработано ${scrapedConferences.length} конференций`
+        sources: sources?.length || 0,
+        conferences: scrapedConferences
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
