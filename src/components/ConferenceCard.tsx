@@ -181,11 +181,20 @@ export const ConferenceCard = ({ conference }: ConferenceCardProps) => {
                   </p>
                 </div>
 
-                {conference.registrationUrl && (
+                {conference.registrationUrl ? (
                   <div className="pt-2">
                     <Button asChild className="w-full" size="lg">
                       <a href={conference.registrationUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                         Зарегистрироваться
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                ) : conference.sourceUrl && (
+                  <div className="pt-2">
+                    <Button asChild variant="outline" className="w-full" size="lg">
+                      <a href={conference.sourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                        Перейти на сайт университета
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     </Button>

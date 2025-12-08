@@ -35,6 +35,7 @@ export const useConferences = () => {
         contactPhone: conf.contact_phone || undefined,
         venue: conf.venue || undefined,
         fee: conf.fee || undefined,
+        sourceUrl: conf.source_url || undefined,
       }));
     },
   });

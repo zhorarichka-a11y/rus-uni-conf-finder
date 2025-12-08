@@ -14,6 +14,7 @@ export interface Conference {
   contactPhone?: string;
   venue?: string;
   fee?: string;
+  sourceUrl?: string;
 }
 
 export const UNIVERSITIES = [
