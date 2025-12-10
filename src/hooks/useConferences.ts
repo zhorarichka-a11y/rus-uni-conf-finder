@@ -6,12 +6,10 @@ export const useConferences = () => {
   return useQuery({
     queryKey: ["conferences"],
     queryFn: async (): Promise<Conference[]> => {
-      const today = new Date().toISOString().split("T")[0];
-      
       const { data, error } = await supabase
         .from("conferences")
         .select("*")
-        .gte("date", today)
+        .gte("date", "2025-01-01")
         .order("date", { ascending: true });
 
       if (error) {
